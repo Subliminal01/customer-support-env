@@ -1,0 +1,58 @@
+name: customer-support-env
+version: "1.0.0"
+description: >
+  A real-world RL environment where an AI agent handles customer support tickets.
+  The agent must classify tickets, respond to customers, and make escalation decisions
+  across three tasks of increasing difficulty.
+
+author: hackathon-participant
+tags:
+  - customer-support
+  - nlp
+  - real-world
+  - triage
+  - escalation
+
+tasks:
+  - name: easy
+    description: Classify the incoming ticket into the correct category.
+    max_steps: 3
+    reward_range: [0.0, 1.0]
+
+  - name: medium
+    description: Classify the ticket and write an appropriate customer response.
+    max_steps: 5
+    reward_range: [0.0, 1.0]
+
+  - name: hard
+    description: Classify, respond, and make the correct escalation/resolution decision.
+    max_steps: 7
+    reward_range: [0.0, 1.0]
+
+action_space:
+  type: discrete
+  actions:
+    - classify
+    - respond
+    - escalate
+    - resolve
+
+observation_space:
+  ticket_id: string
+  ticket_text: string
+  customer_name: string
+  customer_history: object
+  current_step: integer
+  max_steps: integer
+  actions_taken: list
+  feedback: string
+  task_name: string
+  task_description: string
+  done: boolean
+
+endpoints:
+  health: GET /health
+  reset:  POST /reset
+  step:   POST /step
+  state:  GET /state
+  tasks:  GET /tasks
