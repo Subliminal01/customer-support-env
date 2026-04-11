@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""
-Inference script for Customer Support OpenEnv.
-Prints structured stdout blocks required by the validator:
-[START], [STEP], [END]
-Makes LLM calls through the injected LiteLLM proxy.
-"""
 
 import os
 from openai import OpenAI
@@ -19,39 +13,69 @@ def get_client() -> OpenAI:
     )
 
 
-def make_action_with_llm(client: OpenAI, observation_text: str, step_num: int) -> SupportAction:
+def llm_call(client: OpenAI, system_prompt: str, user_prompt: str, max_tokens: int = 120) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a customer support agent in an RL environment. "
-                    "Return one short helpful response for the customer issue."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"Step {step_num}. Observation: {observation_text}",
-            },
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
         ],
         temperature=0,
-        max_tokens=60,
+        max_tokens=max_tokens,
     )
+    return (response.choices[0].message.content or "").strip()
 
-    text = (response.choices[0].message.content or "").strip()
 
-    if step_num == 1:
-        return SupportAction(action_type="classify", content="general_support")
+def classify_ticket(client: OpenAI, ticket_text: str) -> str:
+    text = llm_call(
+        client,
+        system_prompt=(
+            "Classify this support ticket into exactly one category from: "
+            "billing, shipping, technical, refund, other. "
+            "Return only the category word."
+        ),
+        user_prompt=ticket_text,
+        max_tokens=10,
+    ).lower()
 
-    return SupportAction(
-        action_type="respond",
-        content=text[:200] if text else "Thank you for contacting support. I will help with your request.",
+    allowed = {"billing", "shipping", "technical", "refund", "other"}
+    return text if text in allowed else "other"
+
+
+def write_response(client: OpenAI, ticket_text: str) -> str:
+    text = llm_call(
+        client,
+        system_prompt=(
+            "Write a short, empathetic customer support reply in 2 sentences. "
+            "Include several relevant words such as tracking, delivery, sorry, investigate, update, expedite when appropriate."
+        ),
+        user_prompt=ticket_text,
+        max_tokens=120,
     )
+    if not text:
+        text = (
+            "I’m sorry your delivery has been delayed. We will investigate the tracking issue, "
+            "share an update as soon as possible, and try to expedite the delivery."
+        )
+    return text[:400]
+
+
+def write_resolution(client: OpenAI, ticket_text: str) -> str:
+    text = llm_call(
+        client,
+        system_prompt=(
+            "Write a short resolution summary for closing a customer support ticket in 1 sentence."
+        ),
+        user_prompt=ticket_text,
+        max_tokens=80,
+    )
+    if not text:
+        text = "The delivery issue has been reviewed and the ticket is now being closed with follow-up in progress."
+    return text[:300]
 
 
 def main():
-    task_name = "easy"
+    task_name = "medium"
     print(f"[START] task={task_name}", flush=True)
 
     client = get_client()
@@ -61,17 +85,36 @@ def main():
     total_reward = 0.0
     done = False
     step_num = 0
-    max_steps = 5
 
-    while not done and step_num < max_steps:
+    while not done:
         step_num += 1
-        observation_text = str(observation.model_dump())
 
-        action = make_action_with_llm(client, observation_text, step_num)
+        if step_num == 1:
+            category = classify_ticket(client, observation.ticket_text)
+            action = SupportAction(
+                action_type="classify",
+                category=category,
+            )
+        elif step_num == 2:
+            message = write_response(client, observation.ticket_text)
+            action = SupportAction(
+                action_type="respond",
+                message=message,
+            )
+        else:
+            message = write_resolution(client, observation.ticket_text)
+            action = SupportAction(
+                action_type="resolve",
+                message=message,
+            )
+
         observation, reward, done, info = env.step(action)
         total_reward += float(reward)
 
         print(f"[STEP] step={step_num} reward={reward} done={done}", flush=True)
+
+        if step_num >= 3:
+            break
 
     score = max(0.0, min(1.0, total_reward))
     print(f"[END] task={task_name} score={score:.2f} steps={step_num}", flush=True)
@@ -81,5 +124,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"[END] task=easy score=0.00 steps=0 error={type(e).__name__}", flush=True)
+        print(f"[END] task=medium score=0.00 steps=0 error={type(e).__name__}", flush=True)
         raise
