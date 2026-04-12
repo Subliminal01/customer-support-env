@@ -18,16 +18,19 @@ tasks:
     description: Classify the incoming ticket into the correct category.
     max_steps: 3
     reward_range: [0.0, 1.0]
+    grader: reward
 
   - name: medium
     description: Classify the ticket and write an appropriate customer response.
     max_steps: 5
     reward_range: [0.0, 1.0]
+    grader: reward
 
   - name: hard
     description: Classify, respond, and make the correct escalation/resolution decision.
     max_steps: 7
     reward_range: [0.0, 1.0]
+    grader: reward
 
 action_space:
   type: discrete
@@ -52,7 +55,7 @@ observation_space:
 
 endpoints:
   health: GET /health
-  reset:  POST /reset
-  step:   POST /step
-  state:  GET /state
-  tasks:  GET /tasks
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  tasks: GET /tasks

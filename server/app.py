@@ -1,16 +1,17 @@
 """
 FastAPI server for the Customer Support OpenEnv environment.
-Exposes /reset, /step, /state, /health endpoints.
+Exposes /reset, /step, /state, /health, /tasks endpoints.
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-from models import SupportAction
 from environment import CustomerSupportEnvironment
+from models import SupportAction
 
 app = FastAPI(
     title="Customer Support OpenEnv",
@@ -73,11 +74,30 @@ def state(session_id: str = "default"):
 def list_tasks():
     return {
         "tasks": [
-            {"name": "easy", "description": "Classify the ticket only.", "max_steps": 3},
-            {"name": "medium", "description": "Classify + respond to the customer.", "max_steps": 5},
-            {"name": "hard", "description": "Classify + respond + correct escalation decision.", "max_steps": 7},
+            {
+                "name": "easy",
+                "description": "Classify the ticket only.",
+                "max_steps": 3,
+                "reward_range": [0.0, 1.0],
+                "grader": "reward",
+            },
+            {
+                "name": "medium",
+                "description": "Classify + respond to the customer.",
+                "max_steps": 5,
+                "reward_range": [0.0, 1.0],
+                "grader": "reward",
+            },
+            {
+                "name": "hard",
+                "description": "Classify + respond + correct escalation decision.",
+                "max_steps": 7,
+                "reward_range": [0.0, 1.0],
+                "grader": "reward",
+            },
         ]
     }
+
 
 def main():
     import uvicorn
