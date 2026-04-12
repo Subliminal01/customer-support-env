@@ -10,8 +10,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-from environment import CustomerSupportEnvironment
+
 from models import SupportAction
+from environment import CustomerSupportEnvironment
 
 app = FastAPI(
     title="Customer Support OpenEnv",
@@ -35,7 +36,10 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "environment": "customer-support-env"}
+    return {
+        "status": "healthy",
+        "environment": "customer-support-env",
+    }
 
 
 @app.post("/reset")
@@ -53,8 +57,10 @@ def reset(task_name: str = "easy", session_id: str = "default"):
 def step(action: SupportAction, session_id: str = "default"):
     if session_id not in _envs:
         raise HTTPException(status_code=400, detail="No active episode. Call /reset first.")
+
     env = _envs[session_id]
     obs, reward, done, info = env.step(action)
+
     return {
         "observation": obs.model_dump(),
         "reward": reward,
@@ -75,25 +81,31 @@ def list_tasks():
     return {
         "tasks": [
             {
+                "id": "easy",
                 "name": "easy",
-                "description": "Classify the ticket only.",
+                "description": "Classify the incoming ticket into the correct category.",
+                "difficulty": "easy",
                 "max_steps": 3,
                 "reward_range": [0.0, 1.0],
-                "grader": "reward",
+                "grader": "graders:grade_easy",
             },
             {
+                "id": "medium",
                 "name": "medium",
-                "description": "Classify + respond to the customer.",
+                "description": "Classify the ticket and write an appropriate customer response.",
+                "difficulty": "medium",
                 "max_steps": 5,
                 "reward_range": [0.0, 1.0],
-                "grader": "reward",
+                "grader": "graders:grade_medium",
             },
             {
+                "id": "hard",
                 "name": "hard",
-                "description": "Classify + respond + correct escalation decision.",
+                "description": "Classify, respond, and make the correct escalation/resolution decision.",
+                "difficulty": "hard",
                 "max_steps": 7,
                 "reward_range": [0.0, 1.0],
-                "grader": "reward",
+                "grader": "graders:grade_hard",
             },
         ]
     }

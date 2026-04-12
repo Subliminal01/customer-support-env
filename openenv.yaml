@@ -14,23 +14,23 @@ tags:
   - escalation
 
 tasks:
-  - name: easy
+  - id: easy
+    name: easy
     description: Classify the incoming ticket into the correct category.
-    max_steps: 3
-    reward_range: [0.0, 1.0]
-    grader: reward
+    difficulty: easy
+    grader: graders:grade_easy
 
-  - name: medium
+  - id: medium
+    name: medium
     description: Classify the ticket and write an appropriate customer response.
-    max_steps: 5
-    reward_range: [0.0, 1.0]
-    grader: reward
+    difficulty: medium
+    grader: graders:grade_medium
 
-  - name: hard
+  - id: hard
+    name: hard
     description: Classify, respond, and make the correct escalation/resolution decision.
-    max_steps: 7
-    reward_range: [0.0, 1.0]
-    grader: reward
+    difficulty: hard
+    grader: graders:grade_hard
 
 action_space:
   type: discrete
